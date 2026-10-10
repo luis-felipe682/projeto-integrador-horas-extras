@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de horas extras e sobreaviso - PB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- TOAST / NOTIFICAÇÃO -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- MODAL DE JUSTIFICATIVA DO SUPERVISOR -->
+  <div id="modal-supervisor" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-titulo">Avaliar Registro</h3>
+        <button class="modal-close" onclick="fecharModalSupervisor()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-descricao" class="text-muted">Informe uma observação ou justificativa para a decisão:</p>
+        <div class="form-group" style="margin-top: 12px;">
+          <textarea id="modal-motivo" rows="3" placeholder="Ex: Aprovado conforme chamado #4092 ou Reprovado por falta de alinhamento prévio..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModalSupervisor()">Cancelar</button>
+        <button id="modal-btn-confirmar" class="btn btn-primary" onclick="confirmarAvaliacao()">Confirmar Decisão</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-editar-registro" class="modal-overlay hidden">
+    <div class="modal-card" style="max-height: calc(100vh - 40px); overflow-y: auto;">
+      <div class="modal-header">
+        <h3>Editar hora extra</h3>
+        <button class="modal-close" type="button" onclick="fecharModalEditarRegistro()" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-editar-registro" onsubmit="salvarEdicaoRegistro(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="editar-data-inicio">Data de início</label>
+            <input type="date" id="editar-data-inicio" required>
+          </div>
+          <div class="form-group">
+            <label for="editar-data-fim">Data de término</label>
+            <input type="date" id="editar-data-fim" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="editar-hora-inicio">Hora de início</label>
+              <input type="time" id="editar-hora-inicio" required>
+            </div>
+            <div class="form-group">
+              <label for="editar-hora-fim">Hora de término</label>
+              <input type="time" id="editar-hora-fim" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="editar-porcentagem">Adicional</label>
+            <select id="editar-porcentagem" required>
+              <option value="50">Hora extra 50%</option>
+              <option value="100">Hora extra 100%</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editar-justificativa">Justificativa</label>
+            <textarea id="editar-justificativa" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" onclick="fecharModalEditarRegistro()">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDIÇÃO DE SALÁRIO DO COLABORADOR -->
+  <div id="modal-salario" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Atualizar Dados e Salário</h3>
+        <button class="modal-close" onclick="fecharModalSalario()">&times;</button>
+      </div>
+      <form id="form-atualizar-salario" onsubmit="salvarPerfilColaborador(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Cargo / Função</label>
+            <input type="text" id="edit-cargo" required placeholder="Ex: Analista de Sistemas">
+          </div>
+          <div class="form-group">
+            <label>Salário Base Mensal (R$)</label>
+            <input type="number" id="edit-salario" step="0.01" min="0" required placeholder="Ex: 3500.00">
+            <small class="text-muted">Usado para calcular o valor da hora normal (Salário / 220h CLT).</small>
+          </div>
+          <div class="form-group">
+            <label>Carga Horária Mensal Contratual (Horas)</label>
+            <input type="number" id="edit-carga" value="220" min="1" required>
+            <small class="text-muted">Padrão CLT: 220 horas (44h semanais).</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="fecharModalSalario()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOP BAR GLOBAL -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <span class="brand-title">Gestão de horas extras e sobreaviso - PB</span>
+        <span class="brand-badge">Controle de Jornada</span>
+      </div>
+    </div>
+
+    <div id="user-session" class="user-session hidden">
+      <div class="user-info">
+        <div class="user-name" id="session-user-name">Usuário</div>
+        <div class="user-details">
+          <span class="role-badge" id="session-user-role">COLABORADOR</span>
+          <span class="cargo-text" id="session-user-cargo">Cargo</span>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-outline-danger" onclick="fazerLogout()">Sair</button>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- ============================================== -->
+    <!-- TELA 1: AUTENTICAÇÃO (LOGIN E CADASTRO)        -->
+    <!-- ============================================== -->
+    <section id="view-auth" class="auth-wrapper">
+      <div class="auth-aurora-glow"></div>
+      
+      <div class="auth-split-container">
+        <!-- LADO ESQUERDO: TYPOGRAFIA IMPACTANTE COMO NO DESIGN REFERÊNCIA -->
+        <div class="auth-hero">
+          <div class="hero-brand-pill">
+            <span class="hero-pill-dot"></span>
+            PORTAL CORPORATIVO CLT
+          </div>
+          <h1 class="hero-display-title">
+            GESTÃO DE<br>
+            HORAS EXTRAS<br>
+            E SOBREAVISO<br>
+            <span class="hero-accent">- PB</span>
+          </h1>
+          <p class="hero-tagline">
+            Controle inteligente de ponto, apuração automática de adicionais (50%, 100%, DSR) e gestão de plantões de sobreaviso.
+          </p>
+          <div class="hero-indicators">
+            <div class="hero-indicator-item">
+              <span class="indicator-icon">⚡</span>
+              <span>Cálculo automático de 50%, 100% e DSR</span>
+            </div>
+            <div class="hero-indicator-item">
+              <span class="indicator-icon">📡</span>
+              <span>Escalas de Sobreaviso (Art. 244 § 2º CLT)</span>
+            </div>
+            <div class="hero-indicator-item">
+              <span class="indicator-icon">🔒</span>
+              <span>Privacidade salarial estrita & Auditoria</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LADO DIREITO: CARD DE LOGIN / CADASTRO DARK MODE -->
+        <div class="auth-card">
+          <div class="auth-tabs">
+            <button id="tab-btn-login" class="auth-tab active" onclick="alternarAbaAuth('login')">Entrar</button>
+            <button id="tab-btn-cadastro" class="auth-tab" onclick="alternarAbaAuth('cadastro')">Criar Conta</button>
+          </div>
+
+          <!-- FORMULÁRIO DE LOGIN -->
+          <form id="form-login" class="auth-form" onsubmit="realizarLogin(event)">
+            <div class="form-group">
+              <label for="login-email" class="auth-label-caps">EMAIL</label>
+              <input type="email" id="login-email" required placeholder="you@company.com" autocomplete="email">
+            </div>
+
+            <div class="form-group">
+              <div class="label-row">
+                <label for="login-senha" class="auth-label-caps">SENHA</label>
+                <a href="javascript:void(0)" class="forgot-link" onclick="exibirToast('Para redefinir sua senha, solicite ao administrador do sistema.', 'info')">Forgot password?</a>
+              </div>
+              <input type="password" id="login-senha" required placeholder="••••••••" autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn btn-emerald-pill btn-block">Sign in</button>
+
+            <div class="auth-or-divider">
+              <span>or</span>
+            </div>
+
+            <!-- ATALHOS RÁPIDOS DE DEMO PARA APRESENTAÇÃO -->
+            <div class="demo-box">
+              <p class="demo-title">⚡ Acesso Rápido para Apresentação (Demo):</p>
+              <div class="demo-buttons">
+                <button type="button" class="btn btn-demo" onclick="preencherDemo('colaborador')">
+                  👤 Colaborador (João)
+                </button>
+                <button type="button" class="btn btn-demo" onclick="preencherDemo('supervisor')">
+                  🛡️ Supervisor (Carlos)
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-legal-note">
+              Acesso corporativo seguro. Cálculos e apurações em estrita conformidade com a CLT.
+            </div>
+          </form>
+
+          <!-- FORMULÁRIO DE CADASTRO -->
+          <form id="form-cadastro" class="auth-form hidden" onsubmit="realizarCadastro(event)">
+            <h2 class="form-cadastro-title">Criar Nova Conta</h2>
+            <p class="subtitle">Cadastre seus dados e selecione o seu perfil de acesso.</p>
+
+            <div class="form-group">
+              <label for="cad-nome" class="auth-label-caps">NOME COMPLETO</label>
+              <input type="text" id="cad-nome" required placeholder="Ex: Roberto Silva">
+            </div>
+
+            <div class="form-group">
+              <label for="cad-email" class="auth-label-caps">EMAIL CORPORATIVO</label>
+              <input type="email" id="cad-email" required placeholder="roberto@empresa.com">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cad-senha" class="auth-label-caps">SENHA</label>
+                <input type="password" id="cad-senha" required placeholder="Mínimo 6 dígitos">
+              </div>
+              <div class="form-group">
+                <label for="cad-cargo" class="auth-label-caps">CARGO / FUNÇÃO</label>
+                <input type="text" id="cad-cargo" placeholder="Ex: Analista de TI">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="cad-perfil" class="auth-label-caps">PERFIL DE ACESSO</label>
+              <select id="cad-perfil" required onchange="aoMudarPerfilCadastro()">
+                <option value="COLABORADOR">Colaborador (Registra ponto, horas extras, sobreaviso)</option>
+                <option value="SUPERVISOR">Supervisor (Aprova/reprova registros e monitora equipe)</option>
+              </select>
+            </div>
+
+            <!-- Campos visíveis somente se for Colaborador -->
+            <div id="bloco-salario-cadastro" class="salario-group-box">
+              <div class="alert-info-box">
+                🔒 <strong>Privacidade Salarial:</strong> O salário informado é estritamente confidencial. Ele nunca será exibido para supervisores, ficando visível exclusivamente para o seu próprio cálculo financeiro.
+              </div>
+              <div class="form-row" style="margin-top: 10px;">
+                <div class="form-group">
+                  <label for="cad-salario" class="auth-label-caps">SALÁRIO BASE (R$)</label>
+                  <input type="number" id="cad-salario" step="0.01" min="0" placeholder="Ex: 3000.00" value="3000.00">
+                </div>
+                <div class="form-group">
+                  <label for="cad-carga" class="auth-label-caps">CARGA HORÁRIA (CLT)</label>
+                  <input type="number" id="cad-carga" value="220" min="1" placeholder="220">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-emerald-pill btn-block" style="margin-top: 16px;">Cadastrar e Entrar</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TELA 2: PORTAL DO COLABORADOR                  -->
+    <!-- ============================================== -->
+    <section id="view-colaborador" class="dashboard hidden">
+      <!-- HEADER DO COLABORADOR -->
+      <div class="dashboard-header">
+        <div>
+          <h1 id="colab-boas-vindas">Olá, Colaborador</h1>
+          <p class="subtitle">Gerencie suas batidas de ponto, horas extras, sobreavisos e consulte sua estimativa financeira.</p>
+        </div>
+        <div class="live-clock-card">
+          <div class="live-clock-time" id="live-clock">00:00:00</div>
+          <div class="live-clock-date" id="live-date">Quarta-feira, 30 de Setembro</div>
+        </div>
+      </div>
+
+      <!-- CARDS FINANCEIROS & ESTIMATIVAS CLT (EXCLUSIVO DO COLABORADOR) -->
+      <div class="finance-banner">
+        <div class="finance-header">
+          <div class="finance-title">
+            <span class="icon">💰</span>
+            <div>
+              <h3>Estimativa de Remuneração</h3>
+              <p>Valores confidenciais e exclusivos do colaborador com cálculo automático.</p>
+            </div>
+          </div>
+          <div class="finance-actions">
+            <div class="salario-pill">
+              <span>Salário Base:</span>
+              <strong id="card-salario-base">R$ 0,00</strong>
+              <button class="btn-icon" title="Editar Salário" onclick="abrirModalSalario()">✏️</button>
+            </div>
+            <div class="hora-normal-pill">
+              <span>Hora Normal (220h):</span>
+              <strong id="card-valor-hora">R$ 0,00/h</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-metrics">
+          <div class="metric-card metric-he50">
+            <div class="metric-label">⚡ Horas Extras (50%)</div>
+            <div class="metric-val" id="metric-he50-horas">0.0h</div>
+            <div class="metric-sub" id="metric-he50-reais">R$ 0,00 (+50% base)</div>
+          </div>
+
+          <div class="metric-card metric-he100">
+            <div class="metric-label">🔥 Horas Extras (100%)</div>
+            <div class="metric-val" id="metric-he100-horas">0.0h</div>
+            <div class="metric-sub" id="metric-he100-reais">R$ 0,00 (Domingos/Feriados)</div>
+          </div>
+
+          <div class="metric-card metric-sobreaviso">
+            <div class="metric-label">📡 Sobreaviso (1/3 CLT)</div>
+            <div class="metric-val" id="metric-sobreaviso-horas">0.0h</div>
+            <div class="metric-sub" id="metric-sobreaviso-reais">R$ 0,00 (Art. 244 § 2º CLT)</div>
+          </div>
+
+          <div class="metric-card metric-total-destaque">
+            <div class="metric-label">💵 Total Extras + Sobreaviso</div>
+            <div class="metric-val text-success" id="metric-total-receber">R$ 0,00</div>
+            <div class="metric-sub" id="metric-total-aprovado">Apenas Aprovados: R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NAVEGAÇÃO DE ABAS DO COLABORADOR (HORA EXTRA E SOBREAVISO) -->
+      <div class="subtabs-nav">
+        <button id="colab-tab-extra" class="subtab-btn active" onclick="trocarAbaColaborador('extra')">
+          ⚡ Hora Extra
+        </button>
+        <button id="colab-tab-sobreaviso" class="subtab-btn" onclick="trocarAbaColaborador('sobreaviso')">
+          📡 Sobreaviso
+        </button>
+        <button id="colab-tab-historico" class="subtab-btn" onclick="trocarAbaColaborador('historico')">
+          📋 Histórico & Status das Solicitações
+        </button>
+      </div>
+
+      <!-- ABA 1: REGISTRAR HORA EXTRA -->
+      <div id="colab-secao-extra" class="subtab-content">
+        <div class="form-container">
+          <div class="form-intro">
+            <h3>Lançamento de Horas Extras</h3>
+            <p>Envie solicitações de trabalho extraordinário (50% ou 100%). Se houver sobreaviso registrado na mesma data, as horas trabalhadas serão automaticamente deduzidas dele.</p>
+          </div>
+          <form id="form-registro-extra" onsubmit="salvarRegistroExtra(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="extra-tipo">Tipo de Hora Extra</label>
+                <select id="extra-tipo" required onchange="aoMudarTipoExtra()">
+                  <option value="HORA_EXTRA_50">⚡ Hora Extra 50% (Dias úteis e sábados)</option>
+                  <option value="HORA_EXTRA_100">🔥 Hora Extra 100% (Domingos e feriados)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="extra-data-inicio">Data Início</label>
+                <input type="date" id="extra-data-inicio" required onchange="aoMudarDataExtra()">
+              </div>
+
+              <div class="form-group">
+                <label for="extra-hora-inicio">Hora Início</label>
+                <input type="time" id="extra-hora-inicio" required onchange="atualizarPreviaDuracaoExtra()">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="extra-data-fim">Data Fim (para plantões noturnos)</label>
+                <input type="date" id="extra-data-fim" required onchange="atualizarPreviaDuracaoExtra()">
+              </div>
+
+              <div class="form-group">
+                <label for="extra-hora-fim">Hora Fim</label>
+                <input type="time" id="extra-hora-fim" required onchange="atualizarPreviaDuracaoExtra()">
+              </div>
+
+              <div class="form-group">
+                <label>Duração Calculada</label>
+                <div id="extra-duracao-previa" class="previa-box">0.0h</div>
+              </div>
+            </div>
+
+            <!-- ALERTA DE DEDUÇÃO DINÂMICO -->
+            <div id="extra-alerta-deducao" class="alert-info-box hidden" style="margin-bottom: 16px;"></div>
+
+            <div class="form-group">
+              <label for="extra-justificativa">Justificativa do Trabalho Extraordinário</label>
+              <textarea id="extra-justificativa" rows="3" required placeholder="Ex: Atendimento emergencial a chamado crítico ou continuidade de serviço urgente."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg">Lançar Horas Extras</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ABA 2: REGISTRAR SOBREAVISO -->
+      <div id="colab-secao-sobreaviso" class="subtab-content hidden">
+        <div class="form-container">
+          <div class="form-intro">
+            <h3>Lançamento de Escala de Sobreaviso</h3>
+            <p>Cadastre o período em que permaneceu de prontidão (remuneração de 1/3 da hora normal). Homologação automática e imediata, sem necessidade de aprovação ou análise do supervisor.</p>
+          </div>
+
+          <div class="alert-info-box" style="margin-bottom: 16px;">
+            ⚡ <strong>Homologação Direta & Compensação na Hora:</strong> Não requer análise de supervisor. Se você realizar ou já tiver realizado horas extras nesta mesma data, o sistema calcula e aplica a compensação na hora.
+          </div>
+
+          <form id="form-registro-sobreaviso" onsubmit="salvarRegistroSobreaviso(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sobreaviso-data-inicio">Data Início</label>
+                <input type="date" id="sobreaviso-data-inicio" required onchange="aoMudarDataSobreaviso()">
+              </div>
+
+              <div class="form-group">
+                <label for="sobreaviso-hora-inicio">Hora Início</label>
+                <input type="time" id="sobreaviso-hora-inicio" required onchange="atualizarPreviaDuracaoSobreaviso()">
+              </div>
+
+              <div class="form-group">
+                <label for="sobreaviso-data-fim">Data Fim (para escalas noturnas)</label>
+                <input type="date" id="sobreaviso-data-fim" required onchange="atualizarPreviaDuracaoSobreaviso()">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sobreaviso-hora-fim">Hora Fim</label>
+                <input type="time" id="sobreaviso-hora-fim" required onchange="atualizarPreviaDuracaoSobreaviso()">
+              </div>
+
+              <div class="form-group">
+                <label>Duração Prevista (Calculada na hora)</label>
+                <div id="sobreaviso-duracao-previa" class="previa-box">0.0h</div>
+              </div>
+            </div>
+
+            <!-- ALERTA DE DEDUÇÃO DINÂMICO -->
+            <div id="sobreaviso-alerta-deducao" class="alert-info-box hidden" style="margin-bottom: 16px;"></div>
+
+            <div class="form-group">
+              <label for="sobreaviso-justificativa">Justificativa da Escala de Sobreaviso</label>
+              <textarea id="sobreaviso-justificativa" rows="3" required placeholder="Ex: Plantão de prontidão de suporte para contingência operacional no final de semana."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg">Homologar Sobreaviso Imediatamente</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ABA 3: HISTÓRICO & STATUS -->
+      <div id="colab-secao-historico" class="subtab-content hidden">
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Filtrar por Tipo:</label>
+            <select id="colab-filtro-tipo" onchange="carregarHistoricoColaborador()">
+              <option value="TODOS">Todos os tipos</option>
+              <option value="HORA_EXTRA">Horas Extras</option>
+              <option value="SOBREAVISO">Sobreaviso</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Status:</label>
+            <select id="colab-filtro-status" onchange="carregarHistoricoColaborador()">
+              <option value="TODOS">Todos os status</option>
+              <option value="PENDENTE">Pendentes</option>
+              <option value="APROVADO">Aprovados</option>
+              <option value="REPROVADO">Reprovados</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Mês / Período:</label>
+            <input type="month" id="colab-filtro-mes" onchange="carregarHistoricoColaborador()">
+          </div>
+
+          <div class="filter-group" style="align-self: flex-end;">
+            <button class="btn btn-outline" onclick="limparFiltrosColaborador()">Limpar Filtros</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Horário</th>
+                <th>Duração</th>
+                <th>Justificativa</th>
+                <th>Status</th>
+                <th>Parecer do Supervisor</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="colab-tabela-historico">
+              <!-- Inserido dinamicamente via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============================================== -->
+    <!-- TELA 3: PORTAL DO SUPERVISOR                   -->
+    <!-- ============================================== -->
+    <section id="view-supervisor" class="dashboard hidden">
+      <div class="dashboard-header">
+        <div>
+          <div class="badge-supervisor-mode">🛡️ Painel de Gestão & Supervisão</div>
+          <h1>Painel de Controle de Jornada</h1>
+          <p class="subtitle">Acompanhe e valide batidas de ponto, horas extras e escalas de sobreaviso dos colaboradores.</p>
+        </div>
+        <div class="privacy-alert-box">
+          <span class="icon">🔒</span>
+          <div>
+            <strong>Política de Privacidade Ativa:</strong>
+            <p>Conforme as regras do sistema, dados salariais e valores financeiros de colaboradores são totalmente ocultados.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARDS DE MÉTRICAS OPERACIONAIS DO SUPERVISOR (SOMENTE HORAS, NADA FINANCEIRO) -->
+      <div class="grid-metrics-supervisor">
+        <div class="metric-card metric-sup-pendentes">
+          <div class="metric-label">⏳ Pendentes de Aprovação</div>
+          <div class="metric-val" id="sup-metric-pendentes">0</div>
+          <div class="metric-sub">Registros aguardando parecer</div>
+        </div>
+
+        <div class="metric-card metric-he50">
+          <div class="metric-label">⚡ Total Horas Extras (50%)</div>
+          <div class="metric-val" id="sup-metric-he50">0.0h</div>
+          <div class="metric-sub">Horas computadas na equipe</div>
+        </div>
+
+        <div class="metric-card metric-he100">
+          <div class="metric-label">🔥 Total Horas Extras (100%)</div>
+          <div class="metric-val" id="sup-metric-he100">0.0h</div>
+          <div class="metric-sub">Feriados e Domingos</div>
+        </div>
+
+        <div class="metric-card metric-sobreaviso">
+          <div class="metric-label">📡 Total Horas Sobreaviso</div>
+          <div class="metric-val" id="sup-metric-sobreaviso">0.0h</div>
+          <div class="metric-sub">Escalas de prontidão</div>
+        </div>
+
+        <div class="metric-card metric-sup-equipe">
+          <div class="metric-label">👥 Colaboradores Ativos</div>
+          <div class="metric-val" id="sup-metric-colaboradores">0</div>
+          <div class="metric-sub">Integrantes cadastrados</div>
+        </div>
+      </div>
+
+      <!-- NAVEGAÇÃO DO SUPERVISOR -->
+      <div class="subtabs-nav">
+        <button id="sup-tab-registros" class="subtab-btn active" onclick="trocarAbaSupervisor('registros')">
+          📝 Análise e Aprovação de Registros
+        </button>
+        <button id="sup-tab-totais" class="subtab-btn" onclick="trocarAbaSupervisor('totais')">
+          📊 Totais de Horas por Colaborador
+        </button>
+      </div>
+
+      <!-- ABA 1 SUPERVISOR: REGISTROS & APROVAÇÃO -->
+      <div id="sup-secao-registros" class="subtab-content">
+        <!-- FILTROS DO SUPERVISOR -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Colaborador:</label>
+            <select id="sup-filtro-colaborador" onchange="carregarRegistrosSupervisor()">
+              <option value="TODOS">Todos os colaboradores</option>
+              <!-- Preenchido dinamicamente -->
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Tipo:</label>
+            <select id="sup-filtro-tipo" onchange="carregarRegistrosSupervisor()">
+              <option value="TODOS">Todos os tipos</option>
+              <option value="PONTO">Ponto Regular</option>
+              <option value="HORA_EXTRA">Horas Extras</option>
+              <option value="SOBREAVISO">Sobreaviso</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Status:</label>
+            <select id="sup-filtro-status" onchange="carregarRegistrosSupervisor()">
+              <option value="TODOS">Todos os status</option>
+              <option value="PENDENTE" selected>Apenas Pendentes</option>
+              <option value="APROVADO">Aprovados</option>
+              <option value="REPROVADO">Reprovados</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Período (Mês):</label>
+            <input type="month" id="sup-filtro-mes" onchange="carregarRegistrosSupervisor()">
+          </div>
+
+          <div class="filter-group" style="align-self: flex-end;">
+            <button class="btn btn-outline" onclick="limparFiltrosSupervisor()">Limpar Filtros</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Horário</th>
+                <th>Duração</th>
+                <th>Justificativa do Colaborador</th>
+                <th>Status</th>
+                <th>Parecer do Supervisor</th>
+                <th>Ações de Aprovação</th>
+              </tr>
+            </thead>
+            <tbody id="sup-tabela-registros">
+              <!-- Inserido dinamicamente via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA 2 SUPERVISOR: CONSOLIDAÇÃO DE TOTAIS DE HORAS -->
+      <div id="sup-secao-totais" class="subtab-content hidden">
+        <div class="section-actions-bar">
+          <h3>Consolidado de Horas por Colaborador</h3>
+          <button class="btn btn-secondary" onclick="exportarCSVSup()">📥 Exportar Relatório em CSV</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Horas de Ponto</th>
+                <th>Horas Extras (50%)</th>
+                <th>Horas Extras (100%)</th>
+                <th>Horas Sobreaviso</th>
+                <th>Total de Horas</th>
+                <th>Pendências</th>
+                <th>Aprovados</th>
+                <th>Reprovados</th>
+              </tr>
+            </thead>
+            <tbody id="sup-tabela-totais">
+              <!-- Inserido dinamicamente via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Gestão de horas extras e sobreaviso - PB &bull; Projeto Integrador CLT &bull; Aula 29.09</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
