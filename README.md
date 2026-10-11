@@ -67,7 +67,7 @@ Esta política é garantida em três níveis de segurança:
 Ter o Node.js instalado na máquina.
 
 ### 2. Instalação e Execução
-Na pasta do projeto (`Aula 29.09`), execute:
+Na pasta do projeto (`projeto integrado`), execute:
 
 ```bash
 npm start
