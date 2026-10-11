@@ -704,6 +704,17 @@ function limparFiltrosColaborador() {
   carregarResumoFinanceiroColaborador();
 }
 
+// Modal Guia do Protótipo
+function abrirModalGuiaPrototipo() {
+  const modal = document.getElementById('modal-guia-prototipo');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function fecharModalGuiaPrototipo() {
+  const modal = document.getElementById('modal-guia-prototipo');
+  if (modal) modal.classList.add('hidden');
+}
+
 // Modal Salário
 function abrirModalSalario() {
   document.getElementById('edit-cargo').value = usuarioLogado.cargo || '';

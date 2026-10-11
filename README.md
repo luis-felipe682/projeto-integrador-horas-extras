@@ -89,3 +89,33 @@ Para testar ou apresentar o sistema imediatamente, o banco SQLite já inicializa
 | **Supervisor** | `supervisor@empresa.com` | `123456` | Acesso completo de aprovação, sem visibilidade de salários |
 
 Na tela de login, há botões rápidos que preenchem as credenciais de teste com apenas 1 clique.
+
+---
+
+## 🎬 Vídeo de Apresentação (Claude Remotion Skill)
+
+O projeto inclui um vídeo curto de alta qualidade (54s, 30fps, 1280x720) desenvolvido com **Remotion** em [`video-apresentacao/`](file:///c:/Users/LUIS%20DOIDO/Desktop/curso%20IA/Projeto%20Integrador%20-%20Copia/video-apresentacao):
+- **Vídeo Renderizado**: [`video-apresentacao/out/video.mp4`](file:///c:/Users/LUIS%20DOIDO/Desktop/curso%20IA/Projeto%20Integrador%20-%20Copia/video-apresentacao/out/video.mp4)
+- **Pré-visualização Interativa (Studio)**:
+  ```bash
+  cd video-apresentacao
+  npx remotion studio
+  ```
+- **Re-renderização em MP4**:
+  ```bash
+  cd video-apresentacao
+  npx remotion render src/index.ts MyComp out/video.mp4
+  ```
+
+---
+
+## 📑 Documento Completo de Entrega do Projeto
+
+Consulte o arquivo [`DESCRICAO_DO_PROJETO.md`](file:///c:/Users/LUIS%20DOIDO/Desktop/curso%20IA/Projeto%20Integrador%20-%20Copia/DESCRICAO_DO_PROJETO.md) para:
+- Descrição curta do projeto;
+- Detalhamento do **Problema Identificado**;
+- Detalhamento da **Solução Proposta**;
+- Mapeamento do **Público-Alvo**;
+- **Fluxo Visual de Utilização do Protótipo**;
+- **Roteiro e Script de Narração Completo para ElevenLabs** (com timestamps e orientações de voz profissional).
+
